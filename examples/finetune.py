@@ -135,6 +135,9 @@ def main():
         else:
             Warning(f"\nUsing full-rank model ...\n")
 
+    # embedding_layer = backend_model.get_input_embeddings()
+    # if embedding_layer is not None:
+    #     embedding_layer.weight.requires_grad_(True)
 
     model._backend_model = backend_model
 

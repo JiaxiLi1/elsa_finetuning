@@ -123,74 +123,73 @@ class LowRankAdapterLinear(nn.Module):
 
 
 def apply_lowrank_adpt_param(model, model_type, scope, rank, alpha, init):
-
-    if "roberta" in model_type:
-        module_names_dict = {
-            "all": ["query", "key", "value", "dense"],
-            "qkv": ["query", "value", "key"],
-            "qv": ["query", "value"],
-        }
-        module_names = module_names_dict[scope]
-
-        print(model.roberta.encoder.layer[0])
-        for i, layer in enumerate(model.roberta.encoder.layer):
-            target_module_dict = {
-                "attention.self": layer.attention.self,
-                "attention.output": layer.attention.output,
-                "layer.intermediate": layer.intermediate,
-                "layer.output": layer.output,
-            }
-
-            for m_name, module in target_module_dict.items():
-                for name, sub_module in module.named_modules():
-                    if isinstance(sub_module, nn.Linear) and any(
-                        [n in name for n in module_names]
-                    ):
-                        setattr(
-                            module,
-                            name,
-                            LowRankAdapterLinear(sub_module, rank, alpha, init),
-                        )
-                        print(
-                            f"layer.{i}.{m_name}.{name}: {sub_module} --> {getattr(module, name)}.\n"
-                        )
-                        del sub_module
-
-
-    elif model_type == "llama":
-
+    if model_type == "llama":
         if scope == "qv":
-
-
+            # 原始逻辑：只对 q_proj 和 v_proj 应用
             for i, layer in enumerate(model.model.layers):
-
-
                 self_attn = layer.self_attn
 
                 for proj_name in ["q_proj", "v_proj"]:
-
                     if hasattr(self_attn, proj_name):
-
                         sub_module = getattr(self_attn, proj_name)
 
                         if isinstance(sub_module, nn.Linear):
                             setattr(
-
                                 self_attn,
-
                                 proj_name,
-
                                 LowRankAdapterLinear(sub_module, rank, alpha, init),
-
                             )
 
                             print(
-
                                 f"layer.{i}.self_attn.{proj_name}: {sub_module} --> {getattr(self_attn, proj_name)}.\n"
-
                             )
 
                             del sub_module
+
+        elif scope == "all":
+            # 新增逻辑：对所有注意力权重和 MLP 权重应用
+            for i, layer in enumerate(model.model.layers):
+                # 处理注意力权重（qkvo）
+                self_attn = layer.self_attn
+
+                for proj_name in ["q_proj", "k_proj", "v_proj", "o_proj"]:
+                    if hasattr(self_attn, proj_name):
+                        sub_module = getattr(self_attn, proj_name)
+
+                        if isinstance(sub_module, nn.Linear):
+                            setattr(
+                                self_attn,
+                                proj_name,
+                                LowRankAdapterLinear(sub_module, rank, alpha, init),
+                            )
+
+                            print(
+                                f"layer.{i}.self_attn.{proj_name}: {sub_module} --> {getattr(self_attn, proj_name)}.\n"
+                            )
+
+                            del sub_module
+
+                # 处理 MLP 权重（up_proj, down_proj, gate_proj）
+                mlp = layer.mlp
+
+                for proj_name in ["up_proj", "down_proj", "gate_proj"]:
+                    if hasattr(mlp, proj_name):
+                        sub_module = getattr(mlp, proj_name)
+
+                        if isinstance(sub_module, nn.Linear):
+                            setattr(
+                                mlp,
+                                proj_name,
+                                LowRankAdapterLinear(sub_module, rank, alpha, init),
+                            )
+
+                            print(
+                                f"layer.{i}.mlp.{proj_name}: {sub_module} --> {getattr(mlp, proj_name)}.\n"
+                            )
+
+                            del sub_module
+        else:
+            raise ValueError(f"Invalid scope: {scope}, expected 'qv' or 'all'")
     else:
         raise NotImplementedError(f"Model type {model_type} is not implemented")
 

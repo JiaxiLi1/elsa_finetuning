@@ -6,6 +6,7 @@ import ipdb
 import copy
 import logging
 import os
+import os.path as osp
 import sys
 import json
 import torch
@@ -33,6 +34,22 @@ from lmflow.pipeline.utils.peft_trainer import PeftTrainer, PeftSavingCallback
 
 
 logger = logging.getLogger(__name__)
+
+
+# 在文件开头的imports部分，添加以下代码
+from transformers import Trainer
+from loro_optim import LOROAdamW
+
+class LOROAdamWWrapper(LOROAdamW):
+    def __init__(self, *args, **kwargs):
+        self.loro_freq = kwargs.pop('loro_freq', 100)
+        self.step_count = 0
+        super().__init__(*args, **kwargs)
+
+    def step(self, closure=None):
+        self.step_count += 1
+        use_exact_loro = self.step_count % self.loro_freq == 0
+        return super().step(use_exact_loro=use_exact_loro)
 
 
 class Finetuner(BaseTuner):
@@ -419,7 +436,91 @@ class Finetuner(BaseTuner):
         # optimizers implementation #
         #############################
         optimizer = None
-        if training_args.galore:
+        if model_args.finetune_method == "elsa":
+
+            from torch.optim import Adam
+            from hybrid_lowrank_sparse_adapter import get_optimizer_param_groups, HybridSparseAdapter
+
+
+            for name, module in model.get_backend_model().named_modules():
+                if isinstance(module, HybridSparseAdapter):
+                    for param_name, param in module.named_parameters():
+                        param.requires_grad_(True)
+                        print(f"Set {name}.{param_name} requires_grad=True, shape={param.shape}")
+
+
+            optimizer_grouped_parameters = get_optimizer_param_groups(
+                model.get_backend_model(),
+                weight_decay=model_args.finetune_weight_decay,
+                lr=training_args.learning_rate
+            )
+
+
+            elsa_optimizer = Adam(optimizer_grouped_parameters)
+            optimizer = elsa_optimizer
+        elif model_args.finetune_method == "cola":
+
+            from torch.optim import Adam
+            from cola_lowrank_sparse_adapter import cola_get_optimizer_param_groups, cola_HybridSparseAdapter
+
+
+            for name, module in model.get_backend_model().named_modules():
+                if isinstance(module, cola_HybridSparseAdapter):
+                    for param_name, param in module.named_parameters():
+                        param.requires_grad_(True)
+                        print(f"Set {name}.{param_name} requires_grad=True, shape={param.shape}")
+
+
+            optimizer_grouped_parameters = cola_get_optimizer_param_groups(
+                model.get_backend_model(),
+                weight_decay=model_args.finetune_weight_decay,
+                lr=training_args.learning_rate
+            )
+
+
+            elsa_optimizer = Adam(optimizer_grouped_parameters)
+            optimizer = elsa_optimizer
+        elif model_args.finetune_method == "lora":
+
+            from torch.optim import Adam
+            from lora_lowrank_sparse_adapter import lora_get_optimizer_param_groups, lora_HybridSparseAdapter
+
+
+            for name, module in model.get_backend_model().named_modules():
+                if isinstance(module, lora_HybridSparseAdapter):
+                    for param_name, param in module.named_parameters():
+                        param.requires_grad_(True)
+                        print(f"Set {name}.{param_name} requires_grad=True, shape={param.shape}")
+
+
+            optimizer_grouped_parameters = lora_get_optimizer_param_groups(
+                model.get_backend_model(),
+                weight_decay=model_args.finetune_weight_decay,
+                lr=training_args.learning_rate
+            )
+
+
+            elsa_optimizer = Adam(optimizer_grouped_parameters)
+            optimizer = elsa_optimizer
+        elif model_args.finetune_method == "loro":
+            from loro_optim import LOROAdamW
+            from lowrank_adpt_module import (
+                apply_lowrank_adpt_param,
+                get_lowrank_adpt_param,
+            )
+
+            param_groups = get_lowrank_adpt_param(model.get_backend_model(), lr_scaler=-1)
+
+            optimizer = LOROAdamWWrapper(
+                param_groups,
+                lr=training_args.learning_rate,
+                weight_decay=0,
+                loro_type="loro",
+                model=model.get_backend_model(),
+                loro_freq=getattr(model_args, 'loro_freq', 100)  # 传入频率
+            )
+
+        elif training_args.galore:
             from galore_torch import GaLoreAdamW, GaLoreAdamW8bit, GaLoreAdafactor
             
             galore_params = []

@@ -80,7 +80,55 @@ class ModelArguments:
     load_in_4bit : bool
         whether to load the model in 4bit
     """
-
+    finetune_weight_decay: float = field(
+        default=0.0,
+    )
+    finetune_method: str = field(
+        default="elsa",
+        metadata={"help": "Sparse method to use.",
+                  "choices": ["elsa", "loro", "cola", "sltrain", "lora"]},
+    )
+    lora_rank: int = field(
+        default=8,
+        metadata={"help": "the rank of the lora parameters."},
+    )
+    sparsity: float = field(
+        default=0.05,
+        metadata={"help": "稀疏度（保留列的百分比）"},
+    )
+    gamma: float = field(
+        default=0.5,
+        metadata={"help": "混合参数的初始值"},
+    )
+    sparse_method: str = field(
+        default="svd",
+        metadata={"help": "Sparse method to use.",
+                  "choices": ["svd", "random"]},
+    )
+    sparse_svd_rank: Optional[int] = field(
+        default=None,
+        metadata={"help": "SVD rank for sparse method."},
+    )
+    cola_silu: bool = field(
+        default=False,
+        metadata={"help": "Whether to use cola silu."},
+    )
+    cola_init: bool = field(
+        default=False,
+        metadata={"help": "Whether to use cola init."},
+    )
+    svd_inverse: bool = field(
+        default=False,
+        metadata={"help": "Whether to use svd inverse."},
+    )
+    lora_alpha_custom: float = field(
+        default=1.0,
+        metadata={"help": "The alpha value for lora."},
+    )
+    adapter_scope: str = field(
+        default="qv",
+        metadata={"help": "The scope of adapter."},
+    )
     model_name_or_path: Optional[str] = field(
         default=None,
         metadata={

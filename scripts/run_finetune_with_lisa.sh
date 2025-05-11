@@ -130,7 +130,7 @@ accelerate launch --main_process_port=29500 examples/finetune.py \
     --gradient_checkpointing ${gradient_checkpointing} \
     --use_flash_attention ${use_flash_attention} \
     --gradient_accumulation_steps ${gradient_accumulation_steps} \
-    --use_lisa 1 \
+    --use_lisa 0 \
     --lisa_activated_layers ${lisa_activated_layers} \
     --lisa_interval_steps ${lisa_interval_steps} \
     --lisa_prob_mode ${lisa_prob_mode} \

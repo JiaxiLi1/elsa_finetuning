@@ -1,5 +1,6 @@
 export CUDA_VISIBLE_DEVICES=0
 
+
 lisa_activated_layers=2
 MODE=uniform
 data_dir=$1
@@ -7,9 +8,12 @@ seed=111
 interval=3
 learning_rate=3e-4
 
-MODEL_PATH="/llama2-7b"
-DATASET_PATH="data/${data_dir}"
-OUTPUT_MODEL_PATH="/output_models/finetuned_llama2_${MODE}_${data_dir}_seed_${seed}_inter${interval}_${learning_rate}_${lisa_activated_layers}"
+MODEL_PATH="huggyllama/llama-7b"
+DATASET_PATH="data/OwLore_Dataset/${data_dir}"
+OUTPUT_MODEL_PATH="output_models/finetuned_llama2_${MODE}_${data_dir}_seed_${seed}_inter${interval}_${learning_rate}_${lisa_activated_layers}"
+
+#source /home/rtx3090/miniconda3/bin/activate
+#conda activate owlore
 
 ./scripts/run_finetune_with_lisa.sh \
   --model_name_or_path ${MODEL_PATH} \

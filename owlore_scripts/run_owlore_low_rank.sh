@@ -7,7 +7,7 @@ model_type=llama2
 learning_rate=3e-4
 
 MODEL_PATH="/llama2-7b"
-DATASET_PATH="data/${data_dir}"
+DATASET_PATH="data/Owlore_Dataset/${data_dir}"
 OUTPUT_MODEL_PATH="/output_models/finetuned_${model_type}_owlore_${data_dir}_owl_seed_${seed}_inter${lisa_activated_layers}_${learning_rate}"
 
 ./scripts/run_finetune_with_lisa.sh \

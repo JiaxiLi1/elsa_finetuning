@@ -53,6 +53,91 @@ def main():
     dataset = Dataset(data_args)
     model = AutoModel.get_model(model_args)
 
+    backend_model = model.get_backend_model()
+
+    if model_args.finetune_method == "elsa":
+        from hybrid_lowrank_sparse_adapter import apply_hybrid_adapter, get_optimizer_param_groups
+
+
+        print(f"Model type: {type(backend_model).__name__}")
+
+
+        trainable_param_count = apply_hybrid_adapter(
+            model=backend_model,
+            scope=model_args.adapter_scope,
+            rank=model_args.lora_rank,
+            sparsity=model_args.sparsity,
+            gamma=model_args.gamma,
+            sparse_method=model_args.sparse_method,
+            sparse_svd_rank=model_args.sparse_svd_rank,
+            alpha=model_args.lora_alpha,
+            cola_silu=model_args.cola_silu,
+            cola_init=model_args.cola_init,
+            svd_inverse=model_args.svd_inverse
+        )
+    elif model_args.finetune_method == "cola":
+        from cola_lowrank_sparse_adapter import cola_apply_hybrid_adapter, cola_get_optimizer_param_groups
+
+
+        print(f"Model type: {type(backend_model).__name__}")
+
+
+        trainable_param_count = cola_apply_hybrid_adapter(
+            model=backend_model,
+            scope=model_args.adapter_scope,
+            rank=model_args.lora_rank,
+            sparsity=model_args.sparsity,
+            gamma=model_args.gamma,
+            sparse_method=model_args.sparse_method,
+            sparse_svd_rank=model_args.sparse_svd_rank,
+            alpha=model_args.lora_alpha,
+            cola_silu=model_args.cola_silu,
+            cola_init=model_args.cola_init,
+            svd_inverse=model_args.svd_inverse
+        )
+    elif model_args.finetune_method == "lora":
+        from lora_lowrank_sparse_adapter import lora_apply_hybrid_adapter, lora_get_optimizer_param_groups
+
+
+        print(f"Model type: {type(backend_model).__name__}")
+
+
+        trainable_param_count = lora_apply_hybrid_adapter(
+            model=backend_model,
+            scope=model_args.adapter_scope,
+            rank=model_args.lora_rank,
+            sparsity=model_args.sparsity,
+            gamma=model_args.gamma,
+            sparse_method=model_args.sparse_method,
+            sparse_svd_rank=model_args.sparse_svd_rank,
+            alpha=model_args.lora_alpha,
+            cola_silu=model_args.cola_silu,
+            cola_init=model_args.cola_init,
+            svd_inverse=model_args.svd_inverse
+        )
+    elif model_args.finetune_method == "loro":
+        from loro_optim import LOROAdamW
+        from lowrank_adpt_module import (
+            apply_lowrank_adpt_param,
+            get_lowrank_adpt_param,
+        )
+
+        # apply lowrank adpater parameterization
+        if model_args.adapter_scope is not None:
+            apply_lowrank_adpt_param(
+                backend_model,
+                model_type="llama",
+                scope=model_args.adapter_scope,
+                rank=model_args.lora_rank,
+                alpha=model_args.lora_alpha,
+                init="xavier",
+            )
+        else:
+            Warning(f"\nUsing full-rank model ...\n")
+
+
+    model._backend_model = backend_model
+
     # Finetuning
     tuned_model = finetuner.tune(model=model, dataset=dataset)
 

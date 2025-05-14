@@ -206,6 +206,11 @@ def get_lowrank_adpt_param(model, lr_scaler=1.0):
 
     id_lowrank_params = [id(p) for p in lowrank_params_in + lowrank_params_out]
 
+    for name, p in model.named_parameters():
+        if id(p) not in id_lowrank_params:
+            if "embed_tokens" in name or "layer_norm" in name:
+                continue
+            p.requires_grad_(False)
     # for p in model.parameters():
     #     if id(p) not in id_lowrank_params:
     #         p.requires_grad_(False)

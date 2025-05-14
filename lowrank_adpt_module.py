@@ -206,9 +206,9 @@ def get_lowrank_adpt_param(model, lr_scaler=1.0):
 
     id_lowrank_params = [id(p) for p in lowrank_params_in + lowrank_params_out]
 
-    for p in model.parameters():
-        if id(p) not in id_lowrank_params:
-            p.requires_grad_(False)
+    # for p in model.parameters():
+    #     if id(p) not in id_lowrank_params:
+    #         p.requires_grad_(False)
 
     param_groups = [
         {

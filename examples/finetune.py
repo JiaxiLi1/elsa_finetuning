@@ -18,6 +18,7 @@ import sys
 import os
 sys.path.remove(os.path.abspath(os.path.dirname(sys.argv[0])))
 from transformers import HfArgumentParser
+import torch
 
 from lmflow.args import (
     ModelArguments,
@@ -53,7 +54,12 @@ def main():
     dataset = Dataset(data_args)
     model = AutoModel.get_model(model_args)
 
+
+
     backend_model = model.get_backend_model()
+
+    device = torch.device(f"cuda:{model_args.gpu_id}" if hasattr(model_args, 'gpu_id') else "cuda:0")
+    backend_model = backend_model.to(device)
 
     if model_args.finetune_method == "elsa":
         from hybrid_lowrank_sparse_adapter import apply_hybrid_adapter, get_optimizer_param_groups

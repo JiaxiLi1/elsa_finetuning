@@ -1,6 +1,7 @@
 from . import (
     anthropic_llms,
     api_models,
+    custom_model_loader,
     dummy,
     gguf,
     hf_audiolm,

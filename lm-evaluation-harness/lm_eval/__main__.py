@@ -7,11 +7,12 @@ from functools import partial
 from pathlib import Path
 from typing import Union
 
-from lm_eval import evaluator, utils
-from lm_eval.evaluator import request_caching_arg_to_dict
-from lm_eval.loggers import EvaluationTracker, WandbLogger
-from lm_eval.tasks import TaskManager
-from lm_eval.utils import (
+# from lm_eval import evaluator, utils
+from . import evaluator, utils
+from .evaluator import request_caching_arg_to_dict
+from .loggers import EvaluationTracker, WandbLogger
+from .tasks import TaskManager
+from .utils import (
     handle_non_serializable,
     make_table,
     simple_parse_args_string,

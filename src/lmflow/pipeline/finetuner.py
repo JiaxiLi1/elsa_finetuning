@@ -35,10 +35,45 @@ from lmflow.pipeline.utils.peft_trainer import PeftTrainer, PeftSavingCallback
 
 logger = logging.getLogger(__name__)
 
-
-# 在文件开头的imports部分，添加以下代码
 from transformers import Trainer
 from loro_optim import LOROAdamW
+
+
+class CustomModelSavingCallback(TrainerCallback):
+
+    def __init__(self, model, tokenizer, model_args, output_dir):
+        self.model = model
+        self.tokenizer = tokenizer
+        self.model_args = model_args
+        self.output_dir = output_dir
+
+    def on_save(self, args, state, control, **kwargs):
+        if self.model_args.finetune_method in ["elsa", "cola", "loro", "lora"]:
+            checkpoint_dir = os.path.join(
+                self.output_dir,
+                f"checkpoint-{state.global_step}"
+            )
+            complete_model_dir = os.path.join(checkpoint_dir, "complete_model")
+            os.makedirs(complete_model_dir, exist_ok=True)
+
+            print(f" {state.global_step}, : {self.model_args.finetune_method}")
+
+            try:
+
+                self.model.save_pretrained(complete_model_dir, max_shard_size="100GB")
+
+                self.tokenizer.save_pretrained(complete_model_dir)
+
+                config_dict = self.model.config.to_dict()
+                config_dict["finetune_method"] = self.model_args.finetune_method
+                with open(os.path.join(complete_model_dir, "finetune_config.json"), "w") as f:
+                    json.dump(config_dict, f)
+            except Exception as e:
+                print(f"{self.model_args.finetune_method}: {str(e)}")
+                import traceback
+                traceback.print_exc()
+
+        return control
 
 class LOROAdamWWrapper(LOROAdamW):
     def __init__(self, *args, **kwargs):
@@ -312,6 +347,16 @@ class Finetuner(BaseTuner):
         else:
             FinetuningTrainer = Trainer
             trainer_callbacks = []
+
+        if model_args.finetune_method in ["elsa", "cola", "loro", "lora"]:
+            custom_saving_callback = CustomModelSavingCallback(
+                model=model.get_backend_model(),
+                tokenizer=model.get_tokenizer(),
+                model_args=model_args,
+                output_dir=finetuner_args.output_dir
+            )
+            trainer_callbacks.append(custom_saving_callback)
+
         if data_collator is None:
             data_collator = default_data_collator
 
@@ -590,6 +635,25 @@ class Finetuner(BaseTuner):
                 if model_args.save_aggregated_lora:
                     model.merge_lora_weights()
                 model.save(finetuner_args.output_dir,model_args.save_aggregated_lora)
+
+                if model_args.finetune_method in ["elsa", "cola", "loro", "lora"]:
+                    print(f"Saving complete model with {model_args.finetune_method} method...")
+                    # Create directory for complete model save
+                    complete_model_dir = os.path.join(finetuner_args.output_dir, "complete_model")
+                    os.makedirs(complete_model_dir, exist_ok=True)
+
+
+                    # Save the complete model with all custom components
+                    model.get_backend_model().save_pretrained(complete_model_dir, max_shard_size="100GB")
+                    # Save tokenizer
+                    model.get_tokenizer().save_pretrained(complete_model_dir)
+
+                    # Save config with custom method information
+                    config_dict = model.get_backend_model().config.to_dict()
+                    config_dict["finetune_method"] = model_args.finetune_method
+                    with open(os.path.join(complete_model_dir, "finetune_config.json"), "w") as f:
+                        json.dump(config_dict, f)
+
             # save language_projection for multi-modal model;
             if self.finetuner_args.save_language_projection:
                 language_projection_state = trainer.model.language_projection.state_dict()

@@ -584,21 +584,21 @@ class CustomHFLM(HFLM):
                         config = AutoConfig.from_pretrained(pretrained, trust_remote_code=True)
 
                         #
-                        if not hasattr(self, 'tokenizer') or self.tokenizer is None:
-                            eval_logger.info("create tokenizer...")
-                            revision = kwargs.get('revision', 'main')
-                            trust_remote_code = kwargs.get('trust_remote_code', True)
-                            use_fast_tokenizer = kwargs.get('use_fast_tokenizer', True)
-                            add_bos_token = kwargs.get('add_bos_token', False)
-
-                            self._create_tokenizer(
-                                pretrained=pretrained,
-                                tokenizer=kwargs.get('tokenizer', None),
-                                revision=revision,
-                                trust_remote_code=trust_remote_code,
-                                use_fast_tokenizer=use_fast_tokenizer,
-                                add_bos_token=add_bos_token,
-                            )
+                        # if not hasattr(self, 'tokenizer') or self.tokenizer is None:
+                        #     eval_logger.info("create tokenizer...")
+                        #     revision = kwargs.get('revision', 'main')
+                        #     trust_remote_code = kwargs.get('trust_remote_code', True)
+                        #     use_fast_tokenizer = kwargs.get('use_fast_tokenizer', True)
+                        #     add_bos_token = kwargs.get('add_bos_token', False)
+                        #
+                        #     self._create_tokenizer(
+                        #         pretrained=pretrained,
+                        #         tokenizer=kwargs.get('tokenizer', None),
+                        #         revision=revision,
+                        #         trust_remote_code=trust_remote_code,
+                        #         use_fast_tokenizer=use_fast_tokenizer,
+                        #         add_bos_token=add_bos_token,
+                        #     )
 
                         #
                         if "custom" in imported_modules and hasattr(imported_modules["custom"], 'create_model'):

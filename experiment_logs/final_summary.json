@@ -1,0 +1,27 @@
+{
+  "start_time": "2025-08-06T00:14:11.068888",
+  "end_time": "2025-08-06T01:47:42.031650",
+  "total_duration_seconds": 5610.962762,
+  "results": {
+    "LoRA": {
+      "train_success": true,
+      "eval_success": false
+    },
+    "ELSA_SiLU_True": {
+      "train_success": true,
+      "eval_success": false
+    },
+    "ELSA_SiLU_False": {
+      "train_success": true,
+      "eval_success": false
+    },
+    "COLA": {
+      "train_success": true,
+      "eval_success": false
+    },
+    "LORO": {
+      "train_success": true,
+      "eval_success": false
+    }
+  }
+}

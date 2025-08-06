@@ -36,7 +36,21 @@ from lmflow.pipeline.utils.peft_trainer import PeftTrainer, PeftSavingCallback
 logger = logging.getLogger(__name__)
 
 from transformers import Trainer
-from loro_optim import LOROAdamW
+
+# Import LOROAdamW with proper path handling
+import sys
+import os
+# Add project root to Python path
+project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
+if project_root not in sys.path:
+    sys.path.insert(0, project_root)
+
+try:
+    from loro_optim import LOROAdamW
+except ImportError as e:
+    # Fallback if module not found
+    print(f"Warning: Could not import LOROAdamW: {e}")
+    LOROAdamW = None
 
 
 class CustomModelSavingCallback(TrainerCallback):

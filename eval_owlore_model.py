@@ -48,84 +48,18 @@ class OwLoreModelLoader:
         with open(config_path, 'r') as f:
             config = json.load(f)
         
-        # Load base model first with the same architecture
-        print(f"Loading base model architecture for {self.finetune_method.upper()}")
+        # Load trained model directly from the provided path
+        print(f"Loading trained {self.finetune_method.upper()} model from: {self.model_path}")
         model = AutoModelForCausalLM.from_pretrained(
-            "meta-llama/Llama-3.2-1B",  # Use the original base model
+            self.model_path,  # Use the actual trained model path
             torch_dtype=torch.bfloat16,
             device_map="auto",
             trust_remote_code=True
         )
         
-        # Apply the appropriate adapter
-        if self.finetune_method == "elsa":
-            print(f"Applying ELSA hybrid adapter parameterization")
-            from hybrid_lowrank_sparse_adapter import apply_hybrid_adapter
-            apply_hybrid_adapter(
-                model=model,
-                scope=self.adapter_scope,
-                rank=self.rank,
-                sparsity=self.sparsity,
-                gamma=self.gamma,
-                sparse_method=self.sparse_method,
-                sparse_svd_rank=self.sparse_svd_rank,
-                alpha=self.alpha,
-                cola_silu=self.cola_silu,
-                cola_init=self.cola_init,
-                svd_inverse=self.svd_inverse
-            )
-        elif self.finetune_method == "cola":
-            print(f"Applying COLA hybrid adapter parameterization")
-            from cola_lowrank_sparse_adapter import cola_apply_hybrid_adapter
-            cola_apply_hybrid_adapter(
-                model=model,
-                scope=self.adapter_scope,
-                rank=self.rank,
-                sparsity=self.sparsity,
-                gamma=self.gamma,
-                sparse_method=self.sparse_method,
-                sparse_svd_rank=self.sparse_svd_rank,
-                alpha=self.alpha,
-                cola_silu=self.cola_silu,
-                cola_init=self.cola_init,
-                svd_inverse=self.svd_inverse
-            )
-        elif self.finetune_method == "lora":
-            print(f"Applying LoRA hybrid adapter parameterization")
-            from lora_lowrank_sparse_adapter import lora_apply_hybrid_adapter
-            lora_apply_hybrid_adapter(
-                model=model,
-                scope=self.adapter_scope,
-                rank=self.rank,
-                sparsity=self.sparsity,
-                gamma=self.gamma,
-                sparse_method=self.sparse_method,
-                sparse_svd_rank=self.sparse_svd_rank,
-                alpha=self.alpha,
-                cola_silu=self.cola_silu,
-                cola_init=self.cola_init,
-                svd_inverse=self.svd_inverse
-            )
-        
-        # Now load the trained weights
-        print(f"Loading trained {self.finetune_method.upper()} weights from {self.model_path}")
-        try:
-            from safetensors.torch import load_file
-            state_dict = load_file(os.path.join(self.model_path, "model.safetensors"))
-        except ImportError:
-            state_dict = torch.load(os.path.join(self.model_path, "model.safetensors"), 
-                                  map_location="cpu", weights_only=False)
-        
-        # Load the state dict with strict=False to handle missing/extra keys
-        missing_keys, unexpected_keys = model.load_state_dict(state_dict, strict=False)
-        if missing_keys:
-            print(f"Warning: Missing keys: {len(missing_keys)} keys")
-        if unexpected_keys:
-            print(f"Warning: Unexpected keys: {len(unexpected_keys)} keys")
-        
-        # Ensure all model parameters have the correct dtype (bfloat16)
-        print("Converting model parameters to bfloat16...")
-        model = model.to(torch.bfloat16)
+        # Model already contains the trained weights and adapter structure
+        # No need to apply adapters again or reload weights
+        print(f"✓ Trained {self.finetune_method.upper()} model loaded with all weights and adapters")
         
         print(f"✓ {self.finetune_method.upper()} model loaded successfully!")
         return model, tokenizer
@@ -141,8 +75,8 @@ class OwLoreModelLoader:
         if self.finetune_method in ["elsa", "cola", "lora"]:
             return self._load_hybrid_adapter_model(tokenizer)
         
-        # For LORO method, load base model first then apply adapters
-        print(f"Loading base model for LORO adaptation from: {self.model_path}")
+        # For LORO method, load the trained model directly
+        print(f"Loading trained LORO model from: {self.model_path}")
         model = AutoModelForCausalLM.from_pretrained(
             self.model_path,
             torch_dtype=torch.bfloat16,
@@ -150,34 +84,7 @@ class OwLoreModelLoader:
             trust_remote_code=True
         )
         
-        # Apply LORO adapter parameterization
-        if self.finetune_method == "loro":
-            print(f"Applying LORO low-rank adapter parameterization with scope: {self.adapter_scope}, rank: {self.rank}, alpha: {self.alpha}")
-            apply_lowrank_adpt_param(
-                model,
-                model_type="llama",
-                scope=self.adapter_scope,
-                rank=self.rank,
-                alpha=self.alpha,
-                init="xavier",
-            )
-            
-            # Load the trained weights
-            print(f"Loading trained weights from {self.model_path}")
-            try:
-                # Try to load with safetensors first
-                from safetensors.torch import load_file
-                state_dict = load_file(os.path.join(self.model_path, "model.safetensors"))
-            except ImportError:
-                # Fallback to torch.load with weights_only=False for older models
-                state_dict = torch.load(os.path.join(self.model_path, "model.safetensors"), 
-                                      map_location="cpu", weights_only=False)
-            except Exception as e:
-                print(f"Failed to load with safetensors, trying torch.load: {e}")
-                state_dict = torch.load(os.path.join(self.model_path, "model.safetensors"), 
-                                      map_location="cpu", weights_only=False)
-            
-            model.load_state_dict(state_dict, strict=False)
+        print(f"✓ Trained LORO model loaded with all weights and adapters")
             
         return model, tokenizer
 

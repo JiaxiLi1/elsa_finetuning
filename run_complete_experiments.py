@@ -137,13 +137,30 @@ def train_and_evaluate_model(config, main_log_file):
         log_message(f"❌ {model_name} 训练失败，跳过评估", main_log_file)
         return False, False
     
-    # 检查complete_model是否存在
-    complete_model_path = os.path.join(config["output_dir"], "complete_model")
-    if not os.path.exists(complete_model_path):
-        log_message(f"❌ {model_name} complete_model目录不存在: {complete_model_path}", main_log_file)
+    # 查找complete_model - 支持不同的保存位置
+    output_dir = config["output_dir"]
+    complete_model_path = None
+    
+    # 先检查直接的complete_model目录
+    direct_complete_model = os.path.join(output_dir, "complete_model")
+    if os.path.exists(direct_complete_model):
+        complete_model_path = direct_complete_model
+    else:
+        # 查找最新的checkpoint目录中的complete_model
+        import glob
+        checkpoint_dirs = glob.glob(os.path.join(output_dir, "checkpoint-*"))
+        if checkpoint_dirs:
+            # 按数字排序，取最新的
+            latest_checkpoint = max(checkpoint_dirs, key=lambda x: int(x.split('-')[-1]))
+            checkpoint_complete_model = os.path.join(latest_checkpoint, "complete_model")
+            if os.path.exists(checkpoint_complete_model):
+                complete_model_path = checkpoint_complete_model
+    
+    if not complete_model_path:
+        log_message(f"❌ {model_name} 找不到complete_model目录", main_log_file)
         return True, False
     
-    log_message(f"✅ {model_name} 训练完成，找到complete_model", main_log_file)
+    log_message(f"✅ {model_name} 训练完成，找到complete_model: {complete_model_path}", main_log_file)
     
     # 短暂休息
     log_message("😴 训练完成，休息10秒后开始评估...", main_log_file)
